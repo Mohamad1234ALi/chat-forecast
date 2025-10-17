@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-LAMBDA_API_URL = "https://03w3ig64hl.execute-api.us-east-1.amazonaws.com/default/chat-forecast-insight"
+LAMBDA_API_URL = "https://03w3ig64hl.execute-api.us-east-1.amazonaws.com/default/chat-forecast-insight/chat"
 
 st.title("📊 Forecast Insight Chatbot")
 
