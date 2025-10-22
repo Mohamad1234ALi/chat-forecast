@@ -1,1 +1,6 @@
 streamlit
+requests
+pydantic
+openai>=1.0.0
+boto3
+
