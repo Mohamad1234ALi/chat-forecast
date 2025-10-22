@@ -4,11 +4,15 @@ from pydantic import BaseModel, Field, ValidationError
 from typing import Optional
 from datetime import date, timedelta
 import openai
+from openai import OpenAI
 
 # ---------- Config ----------
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 API_GATEWAY_URL = st.secrets["API_GATEWAY_URL"]
 openai.api_key = OPENAI_API_KEY
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 
 # ---------- Pydantic ----------
 class BaseParams(BaseModel):
@@ -44,12 +48,12 @@ Return ONLY JSON like {{"query_key":"...","params":{{...}}}}.
 User question: "{user_text}"
 If dates are relative (like "last week") map them to 2013–2015 range.
 """
-    resp = openai.ChatCompletion.create(
+    resp = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role":"user","content":prompt}],
         temperature=0
     )
-    content = resp["choices"][0]["message"]["content"].strip()
+    content = resp.choices[0].message.content.strip()
     try:
         parsed = json.loads(content)
     except:
@@ -78,12 +82,12 @@ Query {query_key} returned rows:
 {json.dumps(rows, default=str)}
 Write a short human-readable answer with headline, main reasons (if inferable) and suggested next step.
 """
-    resp = openai.ChatCompletion.create(
+    resp = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role":"user","content":prompt}],
         temperature=0.1
     )
-    return resp["choices"][0]["message"]["content"]
+    return resp.choices[0].message.content.strip()
 
 # ---------- Streamlit UI ----------
 st.title("Rossmann Forecast QA")
