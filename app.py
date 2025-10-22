@@ -9,7 +9,7 @@ from openai import OpenAI
 # ---------- Config ----------
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 API_GATEWAY_URL = st.secrets["API_GATEWAY_URL"]
-openai.api_key = OPENAI_API_KEY
+
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
