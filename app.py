@@ -70,15 +70,19 @@ def call_query_api(query_key, params):
     payload = {"query_key": query_key, "params": params}
     resp = requests.post(
         API_GATEWAY_URL,
-        json=payload,   # ✅ Let requests handle JSON encoding
+        json=payload,   # keep this
         headers={"Content-Type": "application/json"},
         timeout=60
     )
+
+    print("🔍 Full API response text:", resp.text)   # add this line
     resp.raise_for_status()
+
     body = resp.json().get("body", {})
     if isinstance(body, str):
         body = json.loads(body)
     return body
+
 
 def summarize_results(user_question, query_key, rows):
     prompt = f"""
