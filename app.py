@@ -70,7 +70,7 @@ def call_query_api(query_key, params):
     payload = {"query_key": query_key, "params": params}
 
     # 🔍 Debug: show what’s being sent to Lambda
-    print("📤 Sending payload:", json.dumps(payload, indent=2))
+    st.write("📤 Sending payload:", json.dumps(payload, indent=2))
 
     resp = requests.post(
         API_GATEWAY_URL,
@@ -80,7 +80,7 @@ def call_query_api(query_key, params):
     )
 
     # 🔍 Debug: show full response from Lambda/API Gateway
-    print("🔍 Full API response text:", resp.text)
+    st.write("🔍 Full API response text:", resp.text)
 
     resp.raise_for_status()
     body = resp.json().get("body", {})
