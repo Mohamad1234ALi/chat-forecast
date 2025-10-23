@@ -68,7 +68,12 @@ If dates are relative (like "last week") map them to 2013–2015 range.
 
 def call_query_api(query_key, params):
     payload = {"query_key": query_key, "params": params}
-    resp = requests.post(API_GATEWAY_URL, json=payload, timeout=60)
+    resp = requests.post(
+        API_GATEWAY_URL,
+        data=json.dumps(payload),
+        headers={"Content-Type": "application/json"},
+        timeout=60
+    )
     resp.raise_for_status()
     body = resp.json().get("body", {})
     if isinstance(body, str):
