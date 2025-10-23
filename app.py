@@ -68,16 +68,21 @@ If dates are relative (like "last week") map them to 2013–2015 range.
 
 def call_query_api(query_key, params):
     payload = {"query_key": query_key, "params": params}
+
+    # 🔍 Debug: show what’s being sent to Lambda
+    print("📤 Sending payload:", json.dumps(payload, indent=2))
+
     resp = requests.post(
         API_GATEWAY_URL,
-        json=payload,   # keep this
+        json=payload,   # use json= instead of data=
         headers={"Content-Type": "application/json"},
         timeout=60
     )
 
-    print("🔍 Full API response text:", resp.text)   # add this line
-    resp.raise_for_status()
+    # 🔍 Debug: show full response from Lambda/API Gateway
+    print("🔍 Full API response text:", resp.text)
 
+    resp.raise_for_status()
     body = resp.json().get("body", {})
     if isinstance(body, str):
         body = json.loads(body)
