@@ -67,7 +67,7 @@ If dates are relative (like "last week") map them to 2013–2015 range.
     return MappingOutput(**parsed)
 
 def call_query_api(query_key, params):
-    # ✅ Default limit if missing or null
+    # Default limit if missing
     if params.get("limit") is None:
         params["limit"] = 10
 
@@ -83,10 +83,16 @@ def call_query_api(query_key, params):
     st.write("🔍 Full API response text:", resp.text)
 
     resp.raise_for_status()
-    body = resp.json().get("body", {})
+    resp_json = resp.json()
+
+    # Lambda returns { "statusCode": 200, "body": "json-string" }
+    body = resp_json.get("body", {})
     if isinstance(body, str):
         body = json.loads(body)
+
+    # ✅ Return only the actual body dictionary
     return body
+
 
 
 def summarize_results(user_question, query_key, rows):
