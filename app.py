@@ -70,7 +70,7 @@ def call_query_api(query_key, params):
     payload = {"query_key": query_key, "params": params}
     resp = requests.post(
         API_GATEWAY_URL,
-        data=json.dumps(payload),
+        json=payload,   # ✅ Let requests handle JSON encoding
         headers={"Content-Type": "application/json"},
         timeout=60
     )
