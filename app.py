@@ -89,7 +89,7 @@ def call_query_api(query_key, params):
         params["limit"] = 5
 
     payload = {"query_key": query_key, "params": params}
-    st.write("📤 Sending payload:", json.dumps(payload, indent=2))
+    # st.write("📤 Sending payload:", json.dumps(payload, indent=2))
 
     resp = requests.post(
         API_GATEWAY_URL,
@@ -110,7 +110,7 @@ def call_query_api(query_key, params):
     else:
         body = resp_json
     
-    st.write("📦 Final parsed body:", body)
+    # st.write("📦 Final parsed body:", body)
     
     return body
 
