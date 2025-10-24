@@ -126,7 +126,6 @@ Write a clear, human-readable answer that:
 - Mentions *every store in the result list* (do not skip any rows)
 - Includes a headline summarizing what the table shows
 - Highlights main insights or trends (if inferable)
-- Suggests possible next steps
 """
     resp = client.chat.completions.create(
         model="gpt-4o",
