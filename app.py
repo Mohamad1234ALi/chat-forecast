@@ -79,14 +79,14 @@ User question: "{user_text}"
         if "start_date" not in parsed["params"]:
             parsed["params"]["start_date"], parsed["params"]["end_date"] = latest_week_in_dataset()
         if "limit" not in parsed["params"]:
-            parsed["params"]["limit"] = 10
+            parsed["params"]["limit"] = 5
 
     return MappingOutput(**parsed)
     
 def call_query_api(query_key, params):
     # Default limit if missing
     if params.get("limit") is None:
-        params["limit"] = 10
+        params["limit"] = 5
 
     payload = {"query_key": query_key, "params": params}
     st.write("📤 Sending payload:", json.dumps(payload, indent=2))
