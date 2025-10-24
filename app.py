@@ -45,10 +45,12 @@ You are an assistant that MUST map user questions about Rossmann store sales to 
 1) biggest_forecast_errors -> params: start_date, end_date, limit
 2) store_week_summary -> params: store_id, start_date, end_date, limit
 Return ONLY JSON like {{"query_key":"...","params":{{...}}}}.
+If dates are relative (like "last week") map them to **2013–2015 only**.
 If the question cannot be mapped to a query, return:
 {{"query_key":"unsupported","params":{{}}}}
 User question: "{user_text}"
 """
+
     resp = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role":"user","content":prompt}],
