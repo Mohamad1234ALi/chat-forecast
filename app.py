@@ -102,9 +102,14 @@ def call_query_api(query_key, params):
 def summarize_results(user_question, query_key, rows):
     prompt = f"""
 You are a helpful analyst. User asked: "{user_question}"
-Query {query_key} returned rows:
-{json.dumps(rows, default=str)}
-Write a short human-readable answer with headline, main reasons (if inferable) and suggested next step.
+Query {query_key} returned {len(rows)} rows:
+{json.dumps(rows, default=str, indent=2)}
+
+Write a clear, human-readable answer that:
+- Mentions *every store in the result list* (do not skip any rows)
+- Includes a headline summarizing what the table shows
+- Highlights main insights or trends (if inferable)
+- Suggests possible next steps
 """
     resp = client.chat.completions.create(
         model="gpt-4o",
