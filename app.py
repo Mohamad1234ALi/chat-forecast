@@ -145,6 +145,7 @@ if st.button("Ask") and user_q.strip():
             st.stop()
 
     # ---------- Human-readable summary ----------
+    st.write(rows)
     if rows:
         with st.spinner("Summarizing results..."):
             try:
