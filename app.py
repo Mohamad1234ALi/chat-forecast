@@ -45,8 +45,9 @@ You are an assistant that MUST map user questions about Rossmann store sales to 
 1) biggest_forecast_errors -> params: start_date, end_date, limit
 2) store_week_summary -> params: store_id, start_date, end_date, limit
 Return ONLY JSON like {{"query_key":"...","params":{{...}}}}.
+If the question cannot be mapped to a query, return:
+{{"query_key":"unsupported","params":{{}}}}
 User question: "{user_text}"
-If dates are relative (like "last week") map them to 2013–2015 range.
 """
     resp = client.chat.completions.create(
         model="gpt-4o",
@@ -59,13 +60,27 @@ If dates are relative (like "last week") map them to 2013–2015 range.
     except:
         import re
         m = re.search(r"\{.*\}", content, re.S)
-        if not m: raise ValueError("OpenAI did not return JSON")
-        parsed = json.loads(m.group(0))
-    # Fill defaults if missing
-    if "start_date" not in parsed.get("params", {}):
-        parsed["params"]["start_date"], parsed["params"]["end_date"] = latest_week_in_dataset()
-    return MappingOutput(**parsed)
+        if not m:
+            # Return unsupported if JSON not found
+            parsed = {"query_key": "unsupported", "params": {}}
+        else:
+            parsed = json.loads(m.group(0))
+    
+    # Ensure both keys exist
+    if "query_key" not in parsed:
+        parsed["query_key"] = "unsupported"
+    if "params" not in parsed:
+        parsed["params"] = {}
 
+    # Fill defaults if missing
+    if parsed["query_key"] != "unsupported":
+        if "start_date" not in parsed["params"]:
+            parsed["params"]["start_date"], parsed["params"]["end_date"] = latest_week_in_dataset()
+        if "limit" not in parsed["params"]:
+            parsed["params"]["limit"] = 10
+
+    return MappingOutput(**parsed)
+    
 def call_query_api(query_key, params):
     # Default limit if missing
     if params.get("limit") is None:
@@ -131,7 +146,7 @@ if st.button("Ask") and user_q.strip():
             st.stop()
 
     if mapping.query_key == "unsupported":
-        st.warning("Question not supported.")
+        st.warning("Question not recognized or supported. Try asking about store sales or forecast errors.")
         st.stop()
 
     # Validate params client-side
