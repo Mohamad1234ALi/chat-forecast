@@ -84,13 +84,17 @@ def call_query_api(query_key, params):
 
     resp.raise_for_status()
     resp_json = resp.json()
-
-    # Lambda returns { "statusCode": 200, "body": "json-string" }
-    body = resp_json.get("body", {})
-    if isinstance(body, str):
-        body = json.loads(body)
-
-    # ✅ Return only the actual body dictionary
+    
+    # Handle both Lambda and direct API responses
+    if "body" in resp_json:
+        body = resp_json["body"]
+        if isinstance(body, str):
+            body = json.loads(body)
+    else:
+        body = resp_json
+    
+    st.write("📦 Final parsed body:", body)
+    
     return body
 
 
