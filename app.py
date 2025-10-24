@@ -18,7 +18,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 class BaseParams(BaseModel):
     start_date: str
     end_date: str
-    limit: Optional[int] = Field(10, ge=1, le=100)
+    limit: Optional[int] = Field(5, ge=1, le=100)
 
 class BiggestForecastErrorsParams(BaseParams):
     pass
