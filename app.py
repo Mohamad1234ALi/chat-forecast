@@ -97,7 +97,7 @@ def call_query_api(query_key, params):
         headers={"Content-Type": "application/json"},
         timeout=60
     )
-    st.write("🔍 Full API response text:", resp.text)
+    # st.write("🔍 Full API response text:", resp.text)
 
     resp.raise_for_status()
     resp_data = resp.json()
