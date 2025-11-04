@@ -139,7 +139,7 @@ st.title("Rossmann Forecast QA")
 # user_q = st.text_input("Ask a question (e.g., 'Which stores had the biggest forecast errors last week?', 'Give me the weekly forecast vs actual sales for store 105 during May 2014 ?', 'Which stores had the biggest forecast errors last week of month 3 year 2013 ?')")
 user_q = st.text_input(
     "Ask a question:",
-    placeholder="e.g., 'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014?'",
+    placeholder="e.g.,'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014'",
     key="user_q",
 )
 
@@ -148,11 +148,11 @@ if st.button("Ask") and user_q.strip():
         try:
             mapping = map_user_to_query(user_q)
         except Exception as e:
-            st.error(f"Mapping failed: {e}")
+            st.error("Mapping failed: Please rephrase your question or try again later")
             st.stop()
 
     if mapping.query_key == "unsupported":
-        st.warning("Question not recognized or supported. Try asking about store sales or forecast errors.")
+        st.warning("Question not recognized or supported. Please rephrase your question and try again.")
         st.stop()
 
     # Validate params client-side
@@ -162,7 +162,7 @@ if st.button("Ask") and user_q.strip():
         elif mapping.query_key == "store_week_summary":
             StoreWeekSummaryParams(**mapping.params)
     except ValidationError as e:
-        st.error(f"Param validation failed: {e}")
+        st.error("Param validation failed. Please try again.")
         st.stop()
 
     # st.write("Executing query:", mapping.query_key)
@@ -171,7 +171,7 @@ if st.button("Ask") and user_q.strip():
             api_resp = call_query_api(mapping.query_key, mapping.params)
             rows = api_resp.get("rows", [])
         except Exception as e:
-            st.error(f"API call failed: {e}")
+            st.error(f"❌ {e}\n\nPlease try again or change your query")
             st.stop()
 
     # ---------- Human-readable summary ----------
@@ -183,7 +183,7 @@ if st.button("Ask") and user_q.strip():
                 st.markdown("**Answer:**")
                 st.write(summary)
             except Exception as e:
-                st.warning("Failed to summarize results, showing raw table instead.")
-                st.table(rows)
+                st.error("❌ Failed to summarize results.")
+                
     else:
-        st.info("No data returned for the given date range.")
+        st.info("No results found for this query.")
