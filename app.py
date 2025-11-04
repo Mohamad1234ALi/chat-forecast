@@ -100,17 +100,17 @@ def call_query_api(query_key, params):
     st.write("🔍 Full API response text:", resp.text)
 
     resp.raise_for_status()
-    resp_json = resp.json()
-    
-    # Handle both Lambda and direct API responses
-    if "body" in resp_json:
-        body = resp_json["body"]
-        if isinstance(body, str):
-            body = json.loads(body)
+    resp_data = resp.json()
+    if "body" in resp_data:
+        body = json.loads(resp_data["body"]) if isinstance(resp_data["body"], str) else resp_data["body"]
     else:
-        body = resp_json
-    
-    # st.write("📦 Final parsed body:", body)
+        body = resp_data
+
+    st.write("🧩 Query Key:", body.get("query_key"))
+    st.write("📊 Row Count:", body.get("meta", {}).get("row_count"))
+    st.write("🪄 Query ID:", body.get("meta", {}).get("query_id"))
+    st.write("📈 Rows:")
+    st.dataframe(body.get("rows"))
     
     return body
 
