@@ -160,7 +160,7 @@ if st.button("Ask") and user_q.strip():
         st.error(f"Param validation failed: {e}")
         st.stop()
 
-    st.write("Executing query:", mapping.query_key)
+    # st.write("Executing query:", mapping.query_key)
     with st.spinner("Running Athena query..."):
         try:
             api_resp = call_query_api(mapping.query_key, mapping.params)
