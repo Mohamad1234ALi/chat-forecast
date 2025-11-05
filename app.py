@@ -149,7 +149,7 @@ if st.button("Ask") and user_q.strip():
         try:
             mapping = map_user_to_query(user_q)
         except Exception as e:
-            st.error("Mapping failed: Please rephrase your question or try again later")
+            st.error(f"{e}\n\nMapping failed: Please rephrase your question or try again later")
             st.stop()
 
     if mapping.query_key == "unsupported":
