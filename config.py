@@ -22,12 +22,10 @@ def _read_env(key: str, *, required: bool = False, pattern: str | None = None) -
 
 @dataclass(frozen=True)
 class _Env:
-    OPENAI_API_KEY: str
     API_GATEWAY_URL: str
 
 def _load_env() -> _Env:
     return _Env(
-        OPENAI_API_KEY=_read_env("OPENAI_API_KEY", required=True),
         API_GATEWAY_URL=_read_env("API_GATEWAY_URL", required=True),
     )
 
