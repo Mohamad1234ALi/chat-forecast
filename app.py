@@ -8,13 +8,9 @@ from openai import OpenAI
 from config import env
 
 # ---------- Config ----------
-#OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-API_GATEWAY_URL = env.API_GATEWAY_URL
-
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"] 
-#API_GATEWAY_URL = st.secrets["API_GATEWAY_URL"]
-st.write(API_GATEWAY_URL)
-st.write(OPENAI_API_KEY)
+API_GATEWAY_URL = st.secrets["API_GATEWAY_URL"]
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
