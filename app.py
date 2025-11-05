@@ -8,7 +8,7 @@ from openai import OpenAI
 from config import env
 
 # ---------- Config ----------
-OPENAI_API_KEY = env.OPENAI_API_KEY
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 API_GATEWAY_URL = env.API_GATEWAY_URL
 
 
