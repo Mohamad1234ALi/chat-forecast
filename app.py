@@ -5,10 +5,11 @@ from typing import Optional
 from datetime import date, timedelta
 import openai
 from openai import OpenAI
+from config import env
 
 # ---------- Config ----------
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-API_GATEWAY_URL = st.secrets["API_GATEWAY_URL"]
+OPENAI_API_KEY = env.OPENAI_API_KEY
+API_GATEWAY_URL = env.API_GATEWAY_URL
 
 
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -162,7 +163,7 @@ if st.button("Ask") and user_q.strip():
         elif mapping.query_key == "store_week_summary":
             StoreWeekSummaryParams(**mapping.params)
     except ValidationError as e:
-        st.error("Param validation failed. Please try again.")
+        st.error("Parameter validation failed. Please try again.")
         st.stop()
 
     # st.write("Executing query:", mapping.query_key)
