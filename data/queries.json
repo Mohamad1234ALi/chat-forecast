@@ -1,0 +1,37 @@
+{
+  "monthly_forecast_vs_actual": {
+    "description": "Show forecast vs actual totals per store for a given month range.",
+    "params": ["start_date", "end_date", "limit"],
+    "sql": "SELECT \n    store,\n    month(cast(date as date)) as month,\n    year(cast(date as date)) as year,\n    SUM(forecast_sales) AS forecast_total,\n    SUM(actual_sales) AS actual_total,\n    ROUND((SUM(actual_sales) - SUM(forecast_sales)) / NULLIF(SUM(forecast_sales), 0) * 100, 2) AS pct_error\nFROM {database}.rossmann_rossmann\nWHERE cast(date as date) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY store, year, month\nORDER BY pct_error DESC\nLIMIT {limit}"
+  },
+  "top_promo_sales": {
+    "description": "Top stores by sales during promotion in a given period.",
+    "params": ["start_date", "end_date", "limit"],
+    "sql": "SELECT \n    store,\n    SUM(actual_sales) AS promo_sales,\n    COUNT(*) AS promo_days\nFROM {database}.rossmann_rossmann\nWHERE promo_flag = 1 AND cast(date as date) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY store\nORDER BY promo_sales DESC\nLIMIT {limit}"
+  },
+  "weekday_performance": {
+    "description": "Which weekday has the highest average sales in a period.",
+    "params": ["start_date", "end_date"],
+    "sql": "SELECT \n    dayofweek(cast(date as date)) AS weekday,\n    AVG(actual_sales) AS avg_sales\nFROM {database}.rossmann_rossmann\nWHERE cast(date as date) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY weekday\nORDER BY avg_sales DESC"
+  },
+  "high_mape_stores": {
+    "description": "Stores with consistently high forecast error (MAPE > 20%) in a period.",
+    "params": ["start_date", "end_date", "limit"],
+    "sql": "SELECT \n    store,\n    AVG(mape) AS avg_mape\nFROM {database}.rossmann_rossmann\nWHERE cast(date as date) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY store\nHAVING AVG(mape) > 0.2\nORDER BY avg_mape DESC\nLIMIT {limit}"
+  },
+  "store_summary": {
+    "description": "Weekly actual vs forecast summary for a given store and date range.",
+    "params": ["store_id", "start_date", "end_date"],
+    "sql": "SELECT \n    store,\n    date_trunc('week', cast(date as date)) AS week,\n    SUM(actual_sales) AS total_actual,\n    SUM(forecast_sales) AS total_forecast,\n    ROUND((SUM(actual_sales) - SUM(forecast_sales)) / NULLIF(SUM(forecast_sales), 0) * 100, 2) AS pct_error\nFROM {database}.rossmann_rossmann\nWHERE store = {store_id} AND cast(date as date) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY store, week\nORDER BY week DESC"
+  },
+  "biggest_forecast_errors": {
+    "description": "Stores with the largest average percentage forecast error in a period.",
+    "params": ["start_date", "end_date", "limit"],
+    "sql": "SELECT \n    store,\n    AVG(CASE WHEN forecast_sales = 0 THEN NULL ELSE (actual_sales - forecast_sales)/NULLIF(forecast_sales,0) END)*100 AS avg_pct_error,\n    SUM(CASE WHEN promo_flag = 0 THEN 1 ELSE 0 END) AS non_promo_days,\n    AVG(open) AS avg_open_days\nFROM {database}.rossmann_rossmann\nWHERE cast(date as DATE) BETWEEN date('{start_date}') AND date('{end_date}')\nGROUP BY store\nORDER BY ABS(avg_pct_error) DESC\nLIMIT {limit}"
+  },
+  "store_week_summary": {
+    "description": "Weekly forecast vs actual per store within a date range (optionally filter by store).",
+    "params": ["start_date", "end_date", "limit", "store_id"],
+    "sql": "SELECT \n    store,\n    date_trunc('week', cast(date as DATE)) AS week,\n    SUM(forecast_sales) AS forecast_total,\n    SUM(actual_sales) AS actual_total,\n    ROUND((SUM(actual_sales) - SUM(forecast_sales)) / NULLIF(SUM(forecast_sales), 0) * 100, 2) AS pct_error\nFROM {database}.rossmann_rossmann\nWHERE cast(date as DATE) BETWEEN date('{start_date}') AND date('{end_date}')\n  AND ({store_id} IS NULL OR store = {store_id})\nGROUP BY store, week\nORDER BY week DESC\nLIMIT {limit}"
+  }
+}

@@ -29,5 +29,5 @@ def _load_env() -> _Env:
         API_GATEWAY_URL=_read_env("API_GATEWAY_URL", required=True),
     )
 
-# Load on importcccccc
+# Load on import
 env = _load_env()

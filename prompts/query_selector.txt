@@ -1,0 +1,7 @@
+User question: "{user_text}"
+Here are the 3 most similar query templates:
+{desc}
+
+Select the best matching query and fill any missing parameters 
+(start_date, end_date, store_id, limit) with reasonable defaults (2015 range).
+Respond ONLY with JSON: {{"query_key":"...","params":{{...}}}}
