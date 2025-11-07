@@ -280,14 +280,10 @@ def main():
         )
 
         # Get user question
-        user_text = user_q.strip()
-        if not user_text:
-            logger.error("No question provided")
-            print("❌ No question provided")
-            return 1
         
-        if st.button("Ask") and user_text:
-        
+        if st.button("Ask") and user_q.strip():
+            
+            user_text = user_q.strip()
             # Find top matching queries
             logger.info(f"Processing question: {user_text}")
             top_matches = find_top_matches(user_text)
@@ -316,36 +312,39 @@ def main():
             mapping = validate_and_retry(prompt)
             print("\n✅ LLM-Mapping erfolgreich:")
             print(json.dumps(mapping, indent=2, ensure_ascii=False))
+            st.write(mapping)
 
             
-            # st.write("Executing query:", mapping.query_key)
-            with st.spinner("Running Athena query..."):
-                try:
-                    api_resp = call_query_api(mapping.query_key, mapping.params)
-                    rows = api_resp.get("rows", [])
-                except Exception as e:
-                    st.error(f"❌ {e}\n\nPlease try again or change your query")
-                    st.stop()
+            # # st.write("Executing query:", mapping.query_key)
+            # with st.spinner("Running Athena query..."):
+            #     try:
+            #         api_resp = call_query_api(mapping.query_key, mapping.params)
+            #         rows = api_resp.get("rows", [])
+            #     except Exception as e:
+            #         st.error(f"❌ {e}\n\nPlease try again or change your query")
+            #         st.stop()
 
 
-            # ---------- Human-readable summary ----------
-            # st.write(rows)
-            if rows:
-                with st.spinner("Summarizing results..."):
-                    try:
-                        summary = summarize_results(user_q, mapping.query_key, rows)
-                        st.markdown("**Answer:**")
-                        st.write(summary)
-                    except Exception as e:
-                        st.error("❌ Failed to summarize results.")
+            # # ---------- Human-readable summary ----------
+            # # st.write(rows)
+            # if rows:
+            #     with st.spinner("Summarizing results..."):
+            #         try:
+            #             summary = summarize_results(user_q, mapping.query_key, rows)
+            #             st.markdown("**Answer:**")
+            #             st.write(summary)
+            #         except Exception as e:
+            #             st.error("❌ Failed to summarize results.")
                         
-            else:
-                st.info("No results found for this query.")
+            # else:
+            #     st.info("No results found for this query.")
 
 
             
             logger.info("✅ Processing completed successfully")
             return 0
+        else :
+            return 1
         
     except KeyboardInterrupt:
         print("\n\n⚠️ Aborted by user")
