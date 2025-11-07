@@ -1,3 +1,5 @@
+import streamlit as st
+import requests, os, json
 from dotenv import load_dotenv, dotenv_values
 import os
 import json
@@ -22,6 +24,7 @@ S3_EMBEDDINGS_KEY = os.getenv(
     "S3_EMBEDDINGS_KEY", 
     "talk2data/embeddings/embeddings.json"
 )
+API_GATEWAY_URL = os.getenv("API_GATEWAY_URL")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -40,7 +43,8 @@ for key, value in env_values.items():
         os.environ[key] = value
 
 # Validate and initialize OpenAI client
-_openai_api_key = os.getenv("OPENAI_API_KEY")
+#_openai_api_key = os.getenv("OPENAI_API_KEY")
+_openai_api_key = st.secrets["OPENAI_API_KEY"]
 if not _openai_api_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 client = OpenAI(api_key=_openai_api_key)
@@ -207,50 +211,141 @@ def find_top_matches(user_text: str, top_k: int = 2) -> list[tuple[str, float]]:
     top_indices = sims.argsort()[::-1][:top_k]
     return [(keys[i], sims[i]) for i in top_indices]
 
+def summarize_results(user_question, query_key, rows):
+    prompt = f"""
+You are a helpful analyst. User asked: "{user_question}"
+Query {query_key} returned {len(rows)} rows:
+{json.dumps(rows, default=str, indent=2)}
+
+Write a clear, human-readable answer that:
+- Mentions *every store in the result list* (do not skip any rows)
+- Includes a headline summarizing what the table shows
+- Highlights main insights or trends (if inferable)
+"""
+    resp = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role":"user","content":prompt}],
+        temperature=0.1
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def call_query_api(query_key, params):
+    # Default limit if missing
+    if params.get("limit") is None:
+        params["limit"] = 5
+
+    payload = {"query_key": query_key, "params": params}
+    # st.write("📤 Sending payload:", json.dumps(payload, indent=2))
+
+    resp = requests.post(
+        API_GATEWAY_URL,
+        json=payload,
+        headers={"Content-Type": "application/json"},
+        timeout=60
+    )
+    # st.write("🔍 Full API response text:", resp.text)
+
+    resp.raise_for_status()
+    resp_data = resp.json()
+    if "body" in resp_data:
+        body = json.loads(resp_data["body"]) if isinstance(resp_data["body"], str) else resp_data["body"]
+    else:
+        body = resp_data
+
+    st.write("🧩 Query Key:", body.get("query_key"))
+    st.write("📊 Row Count:", body.get("meta", {}).get("row_count"))
+    st.write("🪄 Query ID:", body.get("meta", {}).get("query_id"))
+    st.write("📈 Rows:")
+    st.dataframe(body.get("rows"))
+    
+    return body
+
+
+
 def main():
     """
     Main execution function for the Talk2Data agent.
     Processes user questions and maps them to database queries.
     """
     try:
+
+        # ---------- Streamlit UI ----------
+        st.title("Rossmann Forecast QA")
+        # user_q = st.text_input("Ask a question (e.g., 'Which stores had the biggest forecast errors last week?', 'Give me the weekly forecast vs actual sales for store 105 during May 2014 ?', 'Which stores had the biggest forecast errors last week of month 3 year 2013 ?')")
+        user_q = st.text_input(
+            "Ask a question:",
+            placeholder="e.g.,'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014'",
+            key="user_q",
+        )
+
         # Get user question
-        user_text = input("💬 Your Question: ").strip()
+        user_text = user_q.strip()
         if not user_text:
             logger.error("No question provided")
             print("❌ No question provided")
             return 1
         
-        # Find top matching queries
-        logger.info(f"Processing question: {user_text}")
-        top_matches = find_top_matches(user_text)
-        print("\n🔍 Top Matches:")
-        for k, score in top_matches:
-            print(f"  • {k}: {score:.3f}")
+        if st.button("Ask") and user_text:
         
-        # Load queries description
-        try:
-            with open(QUERIES_PATH, "r", encoding="utf-8") as f:
-                queries_dict = json.load(f)
-        except FileNotFoundError:
-            logger.error(f"queries.json not found at {QUERIES_PATH}")
-            raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
-        
-        # Prepare prompt
-        raw_prompt = load_prompt(str(PROMPT_PATH))
-        prompt = build_prompt(
-            prompt_template=raw_prompt,
-            user_text=user_text,
-            top_matches=top_matches,
-            queries_dict=queries_dict
-        )
-        
-        # LLM Call + validation + retry
-        mapping = validate_and_retry(prompt)
-        print("\n✅ LLM-Mapping erfolgreich:")
-        print(json.dumps(mapping, indent=2, ensure_ascii=False))
-        
-        logger.info("✅ Processing completed successfully")
-        return 0
+            # Find top matching queries
+            logger.info(f"Processing question: {user_text}")
+            top_matches = find_top_matches(user_text)
+            print("\n🔍 Top Matches:")
+            for k, score in top_matches:
+                print(f"  • {k}: {score:.3f}")
+            
+            # Load queries description
+            try:
+                with open(QUERIES_PATH, "r", encoding="utf-8") as f:
+                    queries_dict = json.load(f)
+            except FileNotFoundError:
+                logger.error(f"queries.json not found at {QUERIES_PATH}")
+                raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
+            
+            # Prepare prompt
+            raw_prompt = load_prompt(str(PROMPT_PATH))
+            prompt = build_prompt(
+                prompt_template=raw_prompt,
+                user_text=user_text,
+                top_matches=top_matches,
+                queries_dict=queries_dict
+            )
+            
+            # LLM Call + validation + retry
+            mapping = validate_and_retry(prompt)
+            print("\n✅ LLM-Mapping erfolgreich:")
+            print(json.dumps(mapping, indent=2, ensure_ascii=False))
+
+            
+            # st.write("Executing query:", mapping.query_key)
+            with st.spinner("Running Athena query..."):
+                try:
+                    api_resp = call_query_api(mapping.query_key, mapping.params)
+                    rows = api_resp.get("rows", [])
+                except Exception as e:
+                    st.error(f"❌ {e}\n\nPlease try again or change your query")
+                    st.stop()
+
+
+            # ---------- Human-readable summary ----------
+            # st.write(rows)
+            if rows:
+                with st.spinner("Summarizing results..."):
+                    try:
+                        summary = summarize_results(user_q, mapping.query_key, rows)
+                        st.markdown("**Answer:**")
+                        st.write(summary)
+                    except Exception as e:
+                        st.error("❌ Failed to summarize results.")
+                        
+            else:
+                st.info("No results found for this query.")
+
+
+            
+            logger.info("✅ Processing completed successfully")
+            return 0
         
     except KeyboardInterrupt:
         print("\n\n⚠️ Aborted by user")

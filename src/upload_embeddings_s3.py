@@ -2,6 +2,7 @@ from pathlib import Path
 import os, json, datetime
 import boto3
 from dotenv import load_dotenv, dotenv_values
+import streamlit as st
 
 load_dotenv()
 
@@ -18,8 +19,8 @@ stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H%M%SZ"
 key = f"{KEY_PREFIX}/embeddings.json" #key = f"{KEY_PREFIX}/embeddings-{stamp}.json"
 s3 = boto3.client(
     "s3",
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
     region_name=AWS_REGION
 )
 

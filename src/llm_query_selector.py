@@ -8,7 +8,7 @@ import re
 from time import sleep
 from mapping import MappingOutput
 from pydantic import ValidationError
-
+import streamlit as st
 
 # Configure logging
 logging.basicConfig(
@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Validate and initialize OpenAI client
-_api_key = os.getenv("OPENAI_API_KEY")
+#_api_key = os.getenv("OPENAI_API_KEY")
+_api_key = st.secrets["OPENAI_API_KEY"]
 if not _api_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 client = OpenAI(api_key=_api_key)
