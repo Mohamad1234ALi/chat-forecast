@@ -314,11 +314,16 @@ def main():
             #print(json.dumps(mapping, indent=2, ensure_ascii=False))
             st.write(mapping)
 
-            
+            # Extract values
+            query_key = mapping["query_key"]
+            params = mapping["params"]
+
+            st.write(query_key)
+            st.write(params)
             # st.write("Executing query:", mapping.query_key)
             with st.spinner("Running Athena query..."):
                 try:
-                    api_resp = call_query_api(mapping.query_key, mapping.params)
+                    api_resp = call_query_api(query_key,params)
                     rows = api_resp.get("rows", [])
                 except Exception as e:
                     st.error(f"❌ {e}\n\nPlease try again or change your query")
