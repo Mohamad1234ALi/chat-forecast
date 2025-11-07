@@ -335,7 +335,7 @@ def main():
             if rows:
                 with st.spinner("Summarizing results..."):
                     try:
-                        summary = summarize_results(user_q, mapping.query_key, rows)
+                        summary = summarize_results(user_q, query_key, rows)
                         st.markdown("**Answer:**")
                         st.write(summary)
                     except Exception as e:
@@ -343,12 +343,10 @@ def main():
                         
             else:
                 st.info("No results found for this query.")
-
-
             
             logger.info("✅ Processing completed successfully")
             return 0
-        else :
+        else:
             return 1
         
     except KeyboardInterrupt:
