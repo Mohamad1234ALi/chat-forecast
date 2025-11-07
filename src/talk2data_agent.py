@@ -312,14 +312,12 @@ def main():
             mapping = validate_and_retry(prompt)
             #print("\n✅ LLM-Mapping erfolgreich:")
             #print(json.dumps(mapping, indent=2, ensure_ascii=False))
-            st.write(mapping)
+            #st.write(mapping)
 
             # Extract values
             query_key = mapping["query_key"]
             params = mapping["params"]
 
-            st.write(query_key)
-            st.write(params)
             # st.write("Executing query:", mapping.query_key)
             with st.spinner("Running Athena query..."):
                 try:
