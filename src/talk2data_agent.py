@@ -310,34 +310,34 @@ def main():
             
             # LLM Call + validation + retry
             mapping = validate_and_retry(prompt)
-            print("\n✅ LLM-Mapping erfolgreich:")
-            print(json.dumps(mapping, indent=2, ensure_ascii=False))
+            #print("\n✅ LLM-Mapping erfolgreich:")
+            #print(json.dumps(mapping, indent=2, ensure_ascii=False))
             st.write(mapping)
 
             
-            # # st.write("Executing query:", mapping.query_key)
-            # with st.spinner("Running Athena query..."):
-            #     try:
-            #         api_resp = call_query_api(mapping.query_key, mapping.params)
-            #         rows = api_resp.get("rows", [])
-            #     except Exception as e:
-            #         st.error(f"❌ {e}\n\nPlease try again or change your query")
-            #         st.stop()
+            # st.write("Executing query:", mapping.query_key)
+            with st.spinner("Running Athena query..."):
+                try:
+                    api_resp = call_query_api(mapping.query_key, mapping.params)
+                    rows = api_resp.get("rows", [])
+                except Exception as e:
+                    st.error(f"❌ {e}\n\nPlease try again or change your query")
+                    st.stop()
 
 
-            # # ---------- Human-readable summary ----------
-            # # st.write(rows)
-            # if rows:
-            #     with st.spinner("Summarizing results..."):
-            #         try:
-            #             summary = summarize_results(user_q, mapping.query_key, rows)
-            #             st.markdown("**Answer:**")
-            #             st.write(summary)
-            #         except Exception as e:
-            #             st.error("❌ Failed to summarize results.")
+            # ---------- Human-readable summary ----------
+            # st.write(rows)
+            if rows:
+                with st.spinner("Summarizing results..."):
+                    try:
+                        summary = summarize_results(user_q, mapping.query_key, rows)
+                        st.markdown("**Answer:**")
+                        st.write(summary)
+                    except Exception as e:
+                        st.error("❌ Failed to summarize results.")
                         
-            # else:
-            #     st.info("No results found for this query.")
+            else:
+                st.info("No results found for this query.")
 
 
             
