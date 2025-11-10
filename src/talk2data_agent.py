@@ -294,8 +294,8 @@ try:
                 queries_dict = json.load(f)
         except FileNotFoundError:
             logger.error(f"queries.json not found at {QUERIES_PATH}")
-            raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
-        st.stop()
+            st.error(f"Configuration file not found: {QUERIES_PATH}")
+            st.stop()
         
         # Prepare prompt
         raw_prompt = load_prompt(str(PROMPT_PATH))
