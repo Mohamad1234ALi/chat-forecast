@@ -263,105 +263,101 @@ def call_query_api(query_key, params):
 
 
 
-def main():
-    """
-    Main execution function for the Talk2Data agent.
-    Processes user questions and maps them to database queries.
-    """
-    try:
 
-        # ---------- Streamlit UI ----------
-        st.title("Rossmann Forecast QA")
-        # user_q = st.text_input("Ask a question (e.g., 'Which stores had the biggest forecast errors last week?', 'Give me the weekly forecast vs actual sales for store 105 during May 2014 ?', 'Which stores had the biggest forecast errors last week of month 3 year 2013 ?')")
-        user_q = st.text_input(
-            "Ask a question:",
-            placeholder="e.g.,'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014'",
-            key="user_q",
+"""
+Main execution function for the Talk2Data agent.
+Processes user questions and maps them to database queries.
+"""
+try:
+
+    # ---------- Streamlit UI ----------
+    st.title("Rossmann Forecast QA")
+    # user_q = st.text_input("Ask a question (e.g., 'Which stores had the biggest forecast errors last week?', 'Give me the weekly forecast vs actual sales for store 105 during May 2014 ?', 'Which stores had the biggest forecast errors last week of month 3 year 2013 ?')")
+    user_q = st.text_input(
+        "Ask a question:",
+        placeholder="e.g.,'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014'",
+        key="user_q",
+    )
+
+    # Get user question
+
+    if st.button("Ask") and user_q.strip():
+        
+        user_text = user_q.strip()
+        # Find top matching queries
+        logger.info(f"Processing question: {user_text}")
+        top_matches = find_top_matches(user_text)
+        print("\n🔍 Top Matches:")
+        for k, score in top_matches:
+            print(f"  • {k}: {score:.3f}")
+        
+        # Load queries description
+        try:
+            with open(QUERIES_PATH, "r", encoding="utf-8") as f:
+                queries_dict = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"queries.json not found at {QUERIES_PATH}")
+            raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
+        
+        # Prepare prompt
+        raw_prompt = load_prompt(str(PROMPT_PATH))
+        prompt = build_prompt(
+            prompt_template=raw_prompt,
+            user_text=user_text,
+            top_matches=top_matches,
+            queries_dict=queries_dict
         )
-
-        # Get user question
         
-        if st.button("Ask") and user_q.strip():
-            
-            user_text = user_q.strip()
-            # Find top matching queries
-            logger.info(f"Processing question: {user_text}")
-            top_matches = find_top_matches(user_text)
-            print("\n🔍 Top Matches:")
-            for k, score in top_matches:
-                print(f"  • {k}: {score:.3f}")
-            
-            # Load queries description
+        # LLM Call + validation + retry
+        mapping = validate_and_retry(prompt)
+        #print("\n✅ LLM-Mapping erfolgreich:")
+        #print(json.dumps(mapping, indent=2, ensure_ascii=False))
+        #st.write(mapping)
+
+        # Extract values
+        query_key = mapping["query_key"]
+        params = mapping["params"]
+
+        # st.write("Executing query:", mapping.query_key)
+        with st.spinner("Running Athena query..."):
             try:
-                with open(QUERIES_PATH, "r", encoding="utf-8") as f:
-                    queries_dict = json.load(f)
-            except FileNotFoundError:
-                logger.error(f"queries.json not found at {QUERIES_PATH}")
-                raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
-            
-            # Prepare prompt
-            raw_prompt = load_prompt(str(PROMPT_PATH))
-            prompt = build_prompt(
-                prompt_template=raw_prompt,
-                user_text=user_text,
-                top_matches=top_matches,
-                queries_dict=queries_dict
-            )
-            
-            # LLM Call + validation + retry
-            mapping = validate_and_retry(prompt)
-            #print("\n✅ LLM-Mapping erfolgreich:")
-            #print(json.dumps(mapping, indent=2, ensure_ascii=False))
-            #st.write(mapping)
+                api_resp = call_query_api(query_key,params)
+                rows = api_resp.get("rows", [])
+            except Exception as e:
+                st.error(f"❌ {e}\n\nPlease try again or change your query")
+                st.stop()
 
-            # Extract values
-            query_key = mapping["query_key"]
-            params = mapping["params"]
 
-            # st.write("Executing query:", mapping.query_key)
-            with st.spinner("Running Athena query..."):
+        # ---------- Human-readable summary ----------
+        # st.write(rows)
+        if rows:
+            with st.spinner("Summarizing results..."):
                 try:
-                    api_resp = call_query_api(query_key,params)
-                    rows = api_resp.get("rows", [])
+                    summary = summarize_results(user_q, query_key, rows)
+                    st.markdown("**Answer:**")
+                    st.write(summary)
                 except Exception as e:
-                    st.error(f"❌ {e}\n\nPlease try again or change your query")
-                    st.stop()
-
-
-            # ---------- Human-readable summary ----------
-            # st.write(rows)
-            if rows:
-                with st.spinner("Summarizing results..."):
-                    try:
-                        summary = summarize_results(user_q, query_key, rows)
-                        st.markdown("**Answer:**")
-                        st.write(summary)
-                    except Exception as e:
-                        st.error("❌ Failed to summarize results.")
-                        
-            else:
-                st.info("No results found for this query.")
-            
-            logger.info("✅ Processing completed successfully")
-            return 0
+                    st.error("❌ Failed to summarize results.")
+                    
         else:
-            return 1
+            st.info("No results found for this query.")
         
-    except KeyboardInterrupt:
-        print("\n\n⚠️ Aborted by user")
-        logger.info("Processing aborted by user")
-        return 130
+        logger.info("✅ Processing completed successfully")
         
-    except Exception as e:
-        logger.exception("❌ Processing failed")
-        print(f"\n❌ Failed to process question: {e}")
-        return 1
+    else:
+        st.stop()
+
+except KeyboardInterrupt:
+    print("\n\n⚠️ Aborted by user")
+    logger.info("Processing aborted by user")
+    st.stop()
+
+except Exception as e:
+    logger.exception("❌ Processing failed")
+    print(f"\n❌ Failed to process question: {e}")
+    st.stop()
 
 
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
-        
         
     
     
