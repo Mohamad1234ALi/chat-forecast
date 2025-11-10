@@ -308,8 +308,8 @@ try:
         
         # LLM Call + validation + retry
         mapping = validate_and_retry(prompt)
-        #print("\n✅ LLM-Mapping erfolgreich:")
-        #print(json.dumps(mapping, indent=2, ensure_ascii=False))
+        print("\n✅ LLM-Mapping erfolgreich:")
+        print(json.dumps(mapping, indent=2, ensure_ascii=False))
         #st.write(mapping)
 
         # Extract values
