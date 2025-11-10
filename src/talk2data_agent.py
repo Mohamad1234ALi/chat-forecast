@@ -308,8 +308,8 @@ try:
         
         # LLM Call + validation + retry
         mapping = validate_and_retry(prompt)
-        print("\n✅ LLM-Mapping erfolgreich:")
-        print(json.dumps(mapping, indent=2, ensure_ascii=False))
+        logger.info("\n✅ LLM-Mapping erfolgreich:")
+        logger.info(json.dumps(mapping, indent=2, ensure_ascii=False))
         #st.write(mapping)
 
         # Extract values
@@ -346,14 +346,12 @@ try:
         st.stop()
 
 except KeyboardInterrupt:
-    print("\n\n⚠️ Aborted by user")
     logger.info("Processing aborted by user")
     st.error("Processing aborted by user")
     st.stop()
 
 except Exception as e:
     logger.exception("❌ Processing failed")
-    print(f"\n❌ Failed to process question: {e}")
     st.error(f"\n❌ Failed to process question: {e}")
     st.stop()
 
