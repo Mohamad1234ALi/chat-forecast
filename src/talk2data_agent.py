@@ -284,9 +284,9 @@ try:
         # Find top matching queries
         logger.info(f"Processing question: {user_text}")
         top_matches = find_top_matches(user_text)
-        print("\n🔍 Top Matches:")
+        logger.info("\n🔍 Top Matches:")
         for k, score in top_matches:
-            print(f"  • {k}: {score:.3f}")
+            logger.info(f"  • {k}: {score:.3f}")
         
         # Load queries description
         try:
