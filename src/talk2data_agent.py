@@ -264,10 +264,7 @@ def call_query_api(query_key, params):
 
 
 
-"""
-Main execution function for the Talk2Data agent.
-Processes user questions and maps them to database queries.
-"""
+# ---------- Main Streamlit App ----------
 try:
 
     # ---------- Streamlit UI ----------
@@ -298,6 +295,7 @@ try:
         except FileNotFoundError:
             logger.error(f"queries.json not found at {QUERIES_PATH}")
             raise RuntimeError(f"Configuration file not found: {QUERIES_PATH}")
+        st.stop()
         
         # Prepare prompt
         raw_prompt = load_prompt(str(PROMPT_PATH))
