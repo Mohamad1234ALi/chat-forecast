@@ -348,11 +348,13 @@ try:
 except KeyboardInterrupt:
     print("\n\n⚠️ Aborted by user")
     logger.info("Processing aborted by user")
+    st.error("Processing aborted by user")
     st.stop()
 
 except Exception as e:
     logger.exception("❌ Processing failed")
     print(f"\n❌ Failed to process question: {e}")
+    st.error(f"\n❌ Failed to process question: {e}")
     st.stop()
 
 
