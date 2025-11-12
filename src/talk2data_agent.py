@@ -212,6 +212,22 @@ def find_top_matches(user_text: str, top_k: int = 2) -> list[tuple[str, float]]:
     return [(keys[i], sims[i]) for i in top_indices]
 
 def summarize_results(user_question, query_key, rows):
+     
+    """
+    Summarize query results into a human-readable answer using LLM.
+    
+    Args:
+        user_question (str): The user's question text.
+        query_key (int): the query key used.
+        rows (list[dict]): List of result rows from the query.
+        
+    Returns:
+        str: Human-readable summary of the results.
+        
+    Raises:
+        ValueError: If rows is empty.
+    """
+     
     prompt = f"""
 You are a helpful analyst. User asked: "{user_question}"
 Query {query_key} returned {len(rows)} rows:
@@ -231,6 +247,14 @@ Write a clear, human-readable answer that:
 
 
 def call_query_api(query_key, params):
+    """
+    Call the Athena query API via API Gateway.
+    Args:
+        query_key (str): The query key to execute.
+        params (dict): Parameters for the query.
+    Returns:
+        dict: Parsed JSON response from the API.
+    """
     # Default limit if missing
     if params.get("limit") is None:
         params["limit"] = 5
@@ -310,13 +334,13 @@ try:
         mapping = validate_and_retry(prompt)
         logger.info("\n✅ LLM-Mapping erfolgreich:")
         logger.info(json.dumps(mapping, indent=2, ensure_ascii=False))
-        #st.write(mapping)
+        
 
         # Extract values
         query_key = mapping["query_key"]
         params = mapping["params"]
 
-        # st.write("Executing query:", mapping.query_key)
+        
         with st.spinner("Running Athena query..."):
             try:
                 api_resp = call_query_api(query_key,params)
