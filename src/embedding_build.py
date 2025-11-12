@@ -16,6 +16,7 @@ keys = list(queries.keys())
 
 embeddings = []
 
+# embedding generation
 for text in texts:
     resp = client.embeddings.create(
         input = text,
