@@ -215,6 +215,14 @@ def fix_sql(sql: str) -> str:
         flags=re.IGNORECASE
     )
 
+    # 8) Fix DATE(date) = 'YYYY-MM-DD'  →  CAST(date AS DATE) = DATE 'YYYY-MM-DD'
+    sql = re.sub(
+        r"DATE\s*\(\s*date\s*\)\s*=\s*'(\d{4}-\d{2}-\d{2})'",
+        r"CAST(date AS DATE) = DATE '\1'",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
     return sql
 
 def generate_sql_from_question(question: str) -> dict:
