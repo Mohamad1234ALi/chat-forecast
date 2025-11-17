@@ -329,6 +329,7 @@ def fix_sql(sql: str) -> str:
         r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
         sql,
         flags=re.IGNORECASE,
+        
     )
 
     return sql
