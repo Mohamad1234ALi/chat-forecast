@@ -10,11 +10,7 @@ from openai import OpenAI
 import logging
 import pathlib
 from sklearn.metrics.pairwise import cosine_similarity
-from llm_query_selector import (
-    load_prompt,
-    build_prompt,
-    validate_and_retry
-)
+
 
 # Path configuration
 SCRIPT_DIR = pathlib.Path(__file__).parent.parent
@@ -81,138 +77,6 @@ def get_s3_client():
         logger.info("✅ S3 client initialized")
     return _s3_client
     
-
-def get_embeddings() -> dict:
-    """
-    Get or load cached embeddings from S3 or local file.
-    
-    Returns:
-        dict: Dictionary mapping query keys to embedding vectors.
-        
-    Raises:
-        RuntimeError: If embeddings cannot be loaded from any source.
-    """
-    global _embeddings_cache
-    if _embeddings_cache is None:
-        _embeddings_cache = load_embeddings()
-        logger.info(f"Cached {len(_embeddings_cache)} embeddings")
-    return _embeddings_cache
-
-# load Embeddings from s3 or local fallback
-def load_embeddings() -> dict:
-    """
-    Load embeddings from S3 or fallback to local file.
-    
-    Returns:
-        dict: Dictionary mapping query keys to embedding vectors.
-        
-    Raises:
-        RuntimeError: If embeddings cannot be loaded from any source.
-    """
-    # Try S3 first
-    try:
-        s3 = get_s3_client()
-        bucket = os.getenv("S3_BUCKET")
-        if not bucket:
-            raise ValueError("S3_BUCKET environment variable not set")
-            
-        response = s3.get_object(
-            Bucket=bucket,
-            Key=S3_EMBEDDINGS_KEY
-        )
-        content = response["Body"].read().decode("utf-8")
-        embeddings = json.loads(content)
-        logger.info(f"✅ Loaded {len(embeddings)} embeddings from S3: {S3_EMBEDDINGS_KEY}")
-        return embeddings
-        
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to load embeddings from S3: {e}")
-        logger.info("🔄 Falling back to local embeddings file...")
-        
-        # Fallback to local file
-        try:
-            local_embeddings_path = SCRIPT_DIR / "data" / "embeddings.json"
-            with open(local_embeddings_path, "r", encoding="utf-8") as f:
-                embeddings = json.load(f)
-                logger.info(f"✅ Loaded {len(embeddings)} embeddings from local file: {local_embeddings_path}")
-                return embeddings
-                
-        except FileNotFoundError:
-            logger.error(f"❌ Local embeddings file not found: {local_embeddings_path}")
-            raise RuntimeError(
-                f"Could not load embeddings from S3 or local file.\n"
-                f"S3 error: {e}\n"
-                f"Local file not found: {local_embeddings_path}"
-            ) from e
-            
-        except Exception as local_error:
-            logger.error(f"❌ Failed to load local embeddings: {local_error}")
-            raise RuntimeError(
-                f"Could not load embeddings from S3 or local file.\n"
-                f"S3 error: {e}\n"
-                f"Local error: {local_error}"
-            ) from local_error
-
-# Embed User-input
-def embed_text(text: str) -> list[float]:
-    """
-    Generate embedding vector for input text using OpenAI API.
-    
-    Args:
-        text (str): Input text to embed.
-        
-    Returns:
-        list[float]: Embedding vector.
-        
-    Raises:
-        ValueError: If text is empty.
-        RuntimeError: If OpenAI API call fails.
-    """
-    if not text or not text.strip():
-        raise ValueError("Input text for embedding cannot be empty")
-    
-    try:
-        response = client.embeddings.create(
-            input=text,
-            model=EMBEDDING_MODEL
-        )
-        return response.data[0].embedding
-    except Exception as e:
-        logger.error(f"Failed to generate embedding: {e}")
-        raise RuntimeError(f"Failed to generate embedding: {e}") from e
-
-# --- Cosine Similarity ---
-def find_top_matches(user_text: str, top_k: int = 2) -> list[tuple[str, float]]:
-    """
-    Find the top-k most similar queries to the user's question.
-    
-    Args:
-        user_text (str): The user's question text.
-        top_k (int): Number of top matches to return. Defaults to 2.
-        
-    Returns:
-        list[tuple[str, float]]: List of (query_key, similarity_score) tuples.
-        
-    Raises:
-        ValueError: If top_k is less than 1 or user_text is empty.
-    """
-    if not user_text or not user_text.strip():
-        raise ValueError("user_text cannot be empty")
-    if top_k < 1:
-        raise ValueError("top_k must be at least 1")
-    
-    user_vec = embed_text(user_text)
-    db = get_embeddings()
-
-    keys = list(db.keys())
-    db_matrix = np.stack([db[k] for k in keys])  # (N x D)
-    user_matrix = np.array(user_vec).reshape(1, -1)  # (1 x D)
-
-    sims = cosine_similarity(user_matrix, db_matrix)[0]  
-
-    top_k = min(top_k, len(keys))  # Ensure we don't exceed available keys
-    top_indices = sims.argsort()[::-1][:top_k]
-    return [(keys[i], sims[i]) for i in top_indices]
 
 def summarize_results(user_question, sql_query, rows):
      
@@ -335,9 +199,15 @@ def fix_sql(sql: str) -> str:
 
     return sql
 
-
-
 def generate_sql_from_question(question: str) -> dict:
+    """
+    Generate SQL query from a natural language question using Talk2Data API.
+    Args:
+        question (str): The natural language question.
+    Returns:
+        dict: Parsed JSON response containing the SQL query.
+    """ 
+
     payload = {
         "question": question,
         "max_retries": 3,
@@ -381,6 +251,8 @@ try:
     if st.button("Ask") and user_q.strip():
         
         try:
+            # ---------- Generate SQL via Talk2Data API ----------
+            st.info("Generating SQL query...")
             api_result = generate_sql_from_question(user_q)
             sql_query = api_result.get("sql_query")
 
