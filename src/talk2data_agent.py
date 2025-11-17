@@ -225,6 +225,24 @@ def fix_sql(sql: str) -> str:
 
     return sql
 
+def fix_sql_2(sql: str) -> str:
+
+    """
+    Fix SQL query by replacing table name rossmann_result with rossmann_result_v2.
+    Args:
+        sql (str): The original SQL query.  
+    Returns:
+        str: The fixed SQL query.
+    """
+    # Replace table name rossmann_result → rossmann_result_v2
+    sql = re.sub(
+        r"\brossmann_result\b",
+        "rossmann_result_v2",
+        sql,
+        flags=re.IGNORECASE
+    )
+    return sql
+
 def generate_sql_from_question(question: str) -> dict:
     """
     Generate SQL query from a natural language question using Talk2Data API.
@@ -253,7 +271,7 @@ def generate_sql_from_question(question: str) -> dict:
 
     # Replace standalone "store" with "store_id"
     # \b ensures we don't touch "store_id", "store_type", etc.
-    fixed_sql = fix_sql(raw_sql)
+    fixed_sql = fix_sql_2(raw_sql)
 
     # Put the fixed SQL back into the response dict
     data["sql_query"] = fixed_sql
