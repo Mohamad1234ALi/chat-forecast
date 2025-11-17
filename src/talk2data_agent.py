@@ -198,7 +198,16 @@ def fix_sql(sql: str) -> str:
 
     )
 
-    # NEW: Fix DATE_TRUNC('week', date)
+    # 6) Handle equality comparisons like:
+    sql = re.sub(
+    r"(date)\s*=\s*'(\d{4}-\d{2}-\d{2})'",
+    r"CAST(\1 AS DATE) = DATE '\2'",
+    sql,
+    flags=re.IGNORECASE,
+)
+
+    # 7) Handle date_trunc function calls like:
+    #    date_trunc('week', date)
     sql = re.sub(
         r"date_trunc\(\s*'(\w+)'\s*,\s*date\s*\)",
         r"date_trunc('\1', CAST(date AS DATE))",
