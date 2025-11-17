@@ -325,6 +325,14 @@ def fix_sql(sql: str) -> str:
 
     )
 
+    # NEW: Fix DATE_TRUNC('week', date)
+    sql = re.sub(
+        r"date_trunc\(\s*'(\w+)'\s*,\s*date\s*\)",
+        r"date_trunc('\1', CAST(date AS DATE))",
+        sql,
+        flags=re.IGNORECASE
+    )
+
     return sql
 
 
