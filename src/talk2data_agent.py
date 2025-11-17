@@ -151,83 +151,6 @@ def call_sql_api(sql_query: str):
 def fix_sql(sql: str) -> str:
 
     """
-    Fix SQL query by replacing standalone "store" with "store_id" and adjusting date comparisons.
-    Args:
-        sql (str): The original SQL query.
-    Returns:
-        str: The fixed SQL query.
-    # Use regex to ensure we only replace standalone "store"
-    """
-    # 1) Replace standalone "store" → "store_id"
-    sql = re.sub(r"\bstore\b", "store_id", sql, flags=re.IGNORECASE)
-
-    # 2) Replace comparisons like:
-    #    date >= DATE('2013-03-25')
-    #    date <= DATE('2013-03-31')
-    sql = re.sub(
-        r"(date)\s*([<>]=?|=)\s*DATE\('(\d{4}-\d{2}-\d{2})'\)",
-        r"CAST(\1 AS DATE) \2 DATE '\3'",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    # 3) Replace comparisons like:
-    #    date >= '2013-03-25'
-    #    date <= '2013-03-31'
-    sql = re.sub(
-        r"(date)\s*([<>]=?|=)\s*'(\d{4}-\d{2}-\d{2})'",
-        r"CAST(\1 AS DATE) \2 DATE '\3'",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    # 4) Optionally handle BETWEEN with DATE('...')
-    sql = re.sub(
-        r"(date)\s+BETWEEN\s+DATE\('(\d{4}-\d{2}-\d{2})'\)\s+AND\s+DATE\('(\d{4}-\d{2}-\d{2})'\)",
-        r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    # 5) Optionally handle BETWEEN with plain strings
-    sql = re.sub(
-        r"(date)\s+BETWEEN\s+'(\d{4}-\d{2}-\d{2})'\s+AND\s+'(\d{4}-\d{2}-\d{2})'",
-        r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
-        sql,
-        flags=re.IGNORECASE,
-
-    )
-
-    # 6) Handle equality comparisons like:
-    sql = re.sub(
-    r"(date)\s*=\s*'(\d{4}-\d{2}-\d{2})'",
-    r"CAST(\1 AS DATE) = DATE '\2'",
-    sql,
-    flags=re.IGNORECASE,
-)
-
-    # 7) Handle date_trunc function calls like:
-    #    date_trunc('week', date)
-    sql = re.sub(
-        r"date_trunc\(\s*'(\w+)'\s*,\s*date\s*\)",
-        r"date_trunc('\1', CAST(date AS DATE))",
-        sql,
-        flags=re.IGNORECASE
-    )
-
-    # 8) Fix DATE(date) = 'YYYY-MM-DD'  →  CAST(date AS DATE) = DATE 'YYYY-MM-DD'
-    sql = re.sub(
-        r"DATE\s*\(\s*date\s*\)\s*=\s*'(\d{4}-\d{2}-\d{2})'",
-        r"CAST(date AS DATE) = DATE '\1'",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    return sql
-
-def fix_sql_2(sql: str) -> str:
-
-    """
     Fix SQL query by replacing table name rossmann_result with rossmann_result_v2.
     Args:
         sql (str): The original SQL query.  
@@ -271,7 +194,7 @@ def generate_sql_from_question(question: str) -> dict:
 
     # Replace standalone "store" with "store_id"
     # \b ensures we don't touch "store_id", "store_type", etc.
-    fixed_sql = fix_sql_2(raw_sql)
+    fixed_sql = fix_sql(raw_sql)
 
     # Put the fixed SQL back into the response dict
     data["sql_query"] = fixed_sql
@@ -295,7 +218,6 @@ try:
         
         try:
             # ---------- Generate SQL via Talk2Data API ----------
-            st.info("Generating SQL query...")
             api_result = generate_sql_from_question(user_q)
             sql_query = api_result.get("sql_query")
 
