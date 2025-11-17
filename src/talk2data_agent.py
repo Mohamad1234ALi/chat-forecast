@@ -149,7 +149,7 @@ def call_sql_api(sql_query: str):
     return body
 
 def fix_sql(sql: str) -> str:
-    
+
     """
     Fix SQL query by replacing standalone "store" with "store_id" and adjusting date comparisons.
     Args:
@@ -248,7 +248,6 @@ try:
 
     # ---------- Streamlit UI ----------
     st.title("Rossmann Forecast QA")
-    # user_q = st.text_input("Ask a question (e.g., 'Which stores had the biggest forecast errors last week?', 'Give me the weekly forecast vs actual sales for store 105 during May 2014 ?', 'Which stores had the biggest forecast errors last week of month 3 year 2013 ?')")
     user_q = st.text_input(
         "Ask a question:",
         placeholder="e.g.,'Which stores had the biggest forecast errors last week?' or 'Weekly sales for store 105 in May 2014'",
@@ -292,6 +291,7 @@ try:
                     st.write(summary)
                 except Exception as e:
                     st.error("❌ Failed to summarize results.")
+                    st.stop()
                     
         else:
             st.info("No results found for this query.")
