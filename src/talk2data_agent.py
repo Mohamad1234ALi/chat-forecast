@@ -149,6 +149,15 @@ def call_sql_api(sql_query: str):
     return body
 
 def fix_sql(sql: str) -> str:
+    
+    """
+    Fix SQL query by replacing standalone "store" with "store_id" and adjusting date comparisons.
+    Args:
+        sql (str): The original SQL query.
+    Returns:
+        str: The fixed SQL query.
+    # Use regex to ensure we only replace standalone "store"
+    """
     # 1) Replace standalone "store" → "store_id"
     sql = re.sub(r"\bstore\b", "store_id", sql, flags=re.IGNORECASE)
 
