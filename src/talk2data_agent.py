@@ -374,18 +374,7 @@ try:
         
         try:
             api_result = generate_sql_from_question(user_q)
-
             sql_query = api_result.get("sql_query")
-            confidence = api_result.get("confidence")
-            message = api_result.get("message")
-
-            st.subheader("Generated SQL")
-            st.code(sql_query, language="sql")
-
-            st.subheader("Meta")
-            st.write(f"**Confidence:** {confidence}")
-            st.write(f"**Message:** {message}")
-
 
         except requests.HTTPError as e:
             st.error(f"❌ API HTTP error: {e} - {getattr(e.response, 'text', '')}")
