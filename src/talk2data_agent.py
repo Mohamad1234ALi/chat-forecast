@@ -289,18 +289,50 @@ def call_query_api(query_key, params):
     return body
 
 
+import re
+
 def fix_sql(sql: str) -> str:
-    # 1. Replace standalone "store" → "store_id"
+    # 1) Replace standalone "store" → "store_id"
     sql = re.sub(r"\bstore\b", "store_id", sql, flags=re.IGNORECASE)
 
-    # 2. Convert date string comparisons → cast(date AS DATE)
-    #    Matches: date >= '2014-05-01'
-    pattern = r"(date\s*[<>]=?\s*)'(\d{4}-\d{2}-\d{2})'"
-    replacement = r"CAST(date AS DATE) \1 DATE '\2'"
+    # 2) Replace comparisons like:
+    #    date >= DATE('2013-03-25')
+    #    date <= DATE('2013-03-31')
+    sql = re.sub(
+        r"(date)\s*([<>]=?|=)\s*DATE\('(\d{4}-\d{2}-\d{2})'\)",
+        r"CAST(\1 AS DATE) \2 DATE '\3'",
+        sql,
+        flags=re.IGNORECASE,
+    )
 
-    sql = re.sub(pattern, replacement, sql, flags=re.IGNORECASE)
+    # 3) Replace comparisons like:
+    #    date >= '2013-03-25'
+    #    date <= '2013-03-31'
+    sql = re.sub(
+        r"(date)\s*([<>]=?|=)\s*'(\d{4}-\d{2}-\d{2})'",
+        r"CAST(\1 AS DATE) \2 DATE '\3'",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+    # 4) Optionally handle BETWEEN with DATE('...')
+    sql = re.sub(
+        r"(date)\s+BETWEEN\s+DATE\('(\d{4}-\d{2}-\d{2})'\)\s+AND\s+DATE\('(\d{4}-\d{2}-\d{2})'\)",
+        r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+    # 5) Optionally handle BETWEEN with plain strings
+    sql = re.sub(
+        r"(date)\s+BETWEEN\s+'(\d{4}-\d{2}-\d{2})'\s+AND\s+'(\d{4}-\d{2}-\d{2})'",
+        r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
+        sql,
+        flags=re.IGNORECASE,
+    )
 
     return sql
+
 
 
 def generate_sql_from_question(question: str) -> dict:
