@@ -288,6 +288,21 @@ def call_query_api(query_key, params):
     
     return body
 
+
+def fix_sql(sql: str) -> str:
+    # 1. Replace standalone "store" → "store_id"
+    sql = re.sub(r"\bstore\b", "store_id", sql, flags=re.IGNORECASE)
+
+    # 2. Convert date string comparisons → cast(date AS DATE)
+    #    Matches: date >= '2014-05-01'
+    pattern = r"(date\s*[<>]=?\s*)'(\d{4}-\d{2}-\d{2})'"
+    replacement = r"CAST(date AS DATE) \1 DATE '\2'"
+
+    sql = re.sub(pattern, replacement, sql, flags=re.IGNORECASE)
+
+    return sql
+
+
 def generate_sql_from_question(question: str) -> dict:
     payload = {
         "question": question,
@@ -308,7 +323,7 @@ def generate_sql_from_question(question: str) -> dict:
 
     # Replace standalone "store" with "store_id"
     # \b ensures we don't touch "store_id", "store_type", etc.
-    fixed_sql = re.sub(r"\bstore\b", "store_id", raw_sql, flags=re.IGNORECASE)
+    fixed_sql = fix_sql(raw_sql)
 
     # Put the fixed SQL back into the response dict
     data["sql_query"] = fixed_sql
