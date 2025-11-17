@@ -1,5 +1,6 @@
 import streamlit as st
 import requests, os, json
+import re
 from dotenv import load_dotenv, dotenv_values
 import os
 import json
@@ -45,6 +46,8 @@ for key, value in env_values.items():
 # Validate and initialize OpenAI client
 #_openai_api_key = os.getenv("OPENAI_API_KEY")
 _openai_api_key = st.secrets["OPENAI_API_KEY"]
+# You can also put this in st.secrets["TALK2DATA_API_URL"]
+TALK2DATA_API_URL= os.getenv("TALK2DATA_API_URL")
 if not _openai_api_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 client = OpenAI(api_key=_openai_api_key)
@@ -285,7 +288,31 @@ def call_query_api(query_key, params):
     
     return body
 
+def generate_sql_from_question(question: str) -> dict:
+    payload = {
+        "question": question,
+        "max_retries": 3,
+        "confidence_threshold": 0.7,
+    }
 
+    resp = requests.post(
+        TALK2DATA_API_URL,
+        json=payload,
+        headers={"Content-Type": "application/json"},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    raw_sql = data.get("sql_query", "")
+
+    # Replace standalone "store" with "store_id"
+    # \b ensures we don't touch "store_id", "store_type", etc.
+    fixed_sql = re.sub(r"\bstore\b", "store_id", raw_sql, flags=re.IGNORECASE)
+
+    # Put the fixed SQL back into the response dict
+    data["sql_query"] = fixed_sql
+    return data
 
 
 # ---------- Main Streamlit App ----------
@@ -304,67 +331,60 @@ try:
 
     if st.button("Ask") and user_q.strip():
         
-        user_text = user_q.strip()
-        # Find top matching queries
-        logger.info(f"Processing question: {user_text}")
-        top_matches = find_top_matches(user_text)
-        logger.info("\n🔍 Top Matches:")
-        for k, score in top_matches:
-            logger.info(f"  • {k}: {score:.3f}")
-        
-        # Load queries description
         try:
-            with open(QUERIES_PATH, "r", encoding="utf-8") as f:
-                queries_dict = json.load(f)
-        except FileNotFoundError:
-            logger.error(f"queries.json not found at {QUERIES_PATH}")
-            st.error(f"Configuration file not found: {QUERIES_PATH}")
+            api_result = generate_sql_from_question(user_q)
+
+            sql_query = api_result.get("sql_query")
+            confidence = api_result.get("confidence")
+            message = api_result.get("message")
+
+            st.subheader("Generated SQL")
+            st.code(sql_query, language="sql")
+
+            st.subheader("Meta")
+            st.write(f"**Confidence:** {confidence}")
+            st.write(f"**Message:** {message}")
+
+            # 👉 Here you can now send `sql_query` to Athena / your Lambda if you want
+            # result = call_athena(sql_query)
+            # st.write(result)
+
+        except requests.HTTPError as e:
+            st.error(f"❌ API HTTP error: {e} - {getattr(e.response, 'text', '')}")
             st.stop()
-        
-        # Prepare prompt
-        raw_prompt = load_prompt(str(PROMPT_PATH))
-        prompt = build_prompt(
-            prompt_template=raw_prompt,
-            user_text=user_text,
-            top_matches=top_matches,
-            queries_dict=queries_dict
-        )
-        
-        # LLM Call + validation + retry
-        mapping = validate_and_retry(prompt)
-        logger.info("\n✅ LLM-Mapping erfolgreich:")
-        logger.info(json.dumps(mapping, indent=2, ensure_ascii=False))
-        
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {e}")
+            st.stop()
 
-        # Extract values
-        query_key = mapping["query_key"]
-        params = mapping["params"]
+        # # Extract values
+        # query_key = mapping["query_key"]
+        # params = mapping["params"]
 
         
-        with st.spinner("Running Athena query..."):
-            try:
-                api_resp = call_query_api(query_key,params)
-                rows = api_resp.get("rows", [])
-            except Exception as e:
-                st.error(f"❌ {e}\n\nPlease try again or change your query")
-                st.stop()
+        # with st.spinner("Running Athena query..."):
+        #     try:
+        #         api_resp = call_query_api(query_key,params)
+        #         rows = api_resp.get("rows", [])
+        #     except Exception as e:
+        #         st.error(f"❌ {e}\n\nPlease try again or change your query")
+        #         st.stop()
 
 
-        # ---------- Human-readable summary ----------
-        # st.write(rows)
-        if rows:
-            with st.spinner("Summarizing results..."):
-                try:
-                    summary = summarize_results(user_q, query_key, rows)
-                    st.markdown("**Answer:**")
-                    st.write(summary)
-                except Exception as e:
-                    st.error("❌ Failed to summarize results.")
+        # # ---------- Human-readable summary ----------
+        # # st.write(rows)
+        # if rows:
+        #     with st.spinner("Summarizing results..."):
+        #         try:
+        #             summary = summarize_results(user_q, query_key, rows)
+        #             st.markdown("**Answer:**")
+        #             st.write(summary)
+        #         except Exception as e:
+        #             st.error("❌ Failed to summarize results.")
                     
-        else:
-            st.info("No results found for this query.")
+        # else:
+        #     st.info("No results found for this query.")
         
-        logger.info("✅ Processing completed successfully")
+        # logger.info("✅ Processing completed successfully")
         
     else:
         st.stop()
