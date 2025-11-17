@@ -214,14 +214,14 @@ def find_top_matches(user_text: str, top_k: int = 2) -> list[tuple[str, float]]:
     top_indices = sims.argsort()[::-1][:top_k]
     return [(keys[i], sims[i]) for i in top_indices]
 
-def summarize_results(user_question, query_key, rows):
+def summarize_results(user_question, sql_query, rows):
      
     """
     Summarize query results into a human-readable answer using LLM.
     
     Args:
         user_question (str): The user's question text.
-        query_key (int): the query key used.
+        sql_query (str): The SQL query that was executed.
         rows (list[dict]): List of result rows from the query.
         
     Returns:
@@ -233,7 +233,7 @@ def summarize_results(user_question, query_key, rows):
      
     prompt = f"""
 You are a helpful analyst. User asked: "{user_question}"
-Query {query_key} returned {len(rows)} rows:
+Query {sql_query} returned {len(rows)} rows:
 {json.dumps(rows, default=str, indent=2)}
 
 Write a clear, human-readable answer that:
@@ -249,20 +249,16 @@ Write a clear, human-readable answer that:
     return resp.choices[0].message.content.strip()
 
 
-def call_query_api(query_key, params):
+def call_sql_api(sql_query: str):
     """
     Call the Athena query API via API Gateway.
     Args:
-        query_key (str): The query key to execute.
-        params (dict): Parameters for the query.
+        sql_query (str): The SQL query to execute.
     Returns:
         dict: Parsed JSON response from the API.
     """
-    # Default limit if missing
-    if params.get("limit") is None:
-        params["limit"] = 5
 
-    payload = {"query_key": query_key, "params": params}
+    payload = {"sql_query": sql_query}
     # st.write("📤 Sending payload:", json.dumps(payload, indent=2))
 
     resp = requests.post(
@@ -280,16 +276,13 @@ def call_query_api(query_key, params):
     else:
         body = resp_data
 
-    st.write("🧩 Query Key:", body.get("query_key"))
+    st.write("🧩 Query :", body.get("sql_query"))
     st.write("📊 Row Count:", body.get("meta", {}).get("row_count"))
     st.write("🪄 Query ID:", body.get("meta", {}).get("query_id"))
     st.write("📈 Rows:")
     st.dataframe(body.get("rows"))
     
     return body
-
-
-import re
 
 def fix_sql(sql: str) -> str:
     # 1) Replace standalone "store" → "store_id"
@@ -329,7 +322,7 @@ def fix_sql(sql: str) -> str:
         r"CAST(\1 AS DATE) BETWEEN DATE '\2' AND DATE '\3'",
         sql,
         flags=re.IGNORECASE,
-        
+
     )
 
     return sql
@@ -393,9 +386,6 @@ try:
             st.write(f"**Confidence:** {confidence}")
             st.write(f"**Message:** {message}")
 
-            # 👉 Here you can now send `sql_query` to Athena / your Lambda if you want
-            # result = call_athena(sql_query)
-            # st.write(result)
 
         except requests.HTTPError as e:
             st.error(f"❌ API HTTP error: {e} - {getattr(e.response, 'text', '')}")
@@ -404,35 +394,31 @@ try:
             st.error(f"❌ Unexpected error: {e}")
             st.stop()
 
-        # # Extract values
-        # query_key = mapping["query_key"]
-        # params = mapping["params"]
-
-        
-        # with st.spinner("Running Athena query..."):
-        #     try:
-        #         api_resp = call_query_api(query_key,params)
-        #         rows = api_resp.get("rows", [])
-        #     except Exception as e:
-        #         st.error(f"❌ {e}\n\nPlease try again or change your query")
-        #         st.stop()
+        # ---------- Call Athena via API Gateway ----------
+        with st.spinner("Running Athena query..."):
+            try:
+                api_resp = call_sql_api(sql_query)
+                rows = api_resp.get("rows", [])
+            except Exception as e:
+                st.error(f"❌ {e}\n\nPlease try again or change your query")
+                st.stop()
 
 
-        # # ---------- Human-readable summary ----------
-        # # st.write(rows)
-        # if rows:
-        #     with st.spinner("Summarizing results..."):
-        #         try:
-        #             summary = summarize_results(user_q, query_key, rows)
-        #             st.markdown("**Answer:**")
-        #             st.write(summary)
-        #         except Exception as e:
-        #             st.error("❌ Failed to summarize results.")
+        # ---------- Human-readable summary ----------
+        # st.write(rows)
+        if rows:
+            with st.spinner("Summarizing results..."):
+                try:
+                    summary = summarize_results(user_q, sql_query, rows)
+                    st.markdown("**Answer:**")
+                    st.write(summary)
+                except Exception as e:
+                    st.error("❌ Failed to summarize results.")
                     
-        # else:
-        #     st.info("No results found for this query.")
+        else:
+            st.info("No results found for this query.")
         
-        # logger.info("✅ Processing completed successfully")
+        logger.info("✅ Processing completed successfully")
         
     else:
         st.stop()
